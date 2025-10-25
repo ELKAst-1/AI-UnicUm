@@ -142,5 +142,5 @@ def show_menu():
         else:
             print("❌❌❌❌Неверный ввод повторите попытку:❌❌❌❌")
 
-if __name__ == "__main__":
-    show_menu()
+
+show_menu()
