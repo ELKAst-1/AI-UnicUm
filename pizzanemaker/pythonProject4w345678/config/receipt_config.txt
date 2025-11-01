@@ -1,0 +1,10 @@
+[Чек]
+Название_компании=Pizza Maker
+ИНН=1234567890
+Адрес=г. Москва, ул. Пушкина, д. 1
+Телефон=+7 (495) 123-45-67
+Сайт=https://pizza-maker.ru
+НДС=20%%
+
+[QR]
+Ссылка=https://genius-school.kuzstu.ru/pizza-maker

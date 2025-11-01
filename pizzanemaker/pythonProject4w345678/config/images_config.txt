@@ -1,0 +1,16 @@
+[Пиццы]
+маргарита = images/margarita.jpg
+пепперони = images/pepperoni.jpg
+гавайская = images/hawaiian.jpg
+четыре сыра = images/four_cheese.jpg
+мясная = images/meat.jpg
+вегетарианская = images/vegetarian.jpg
+кастомная = images/custom.jpg
+
+[Напитки]
+кола = images/cola.jpg
+фанта = images/fanta.jpg
+спрайт = images/sprite.jpg
+вода = images/water.jpg
+сок = images/juice.jpg
+
