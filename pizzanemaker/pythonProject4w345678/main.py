@@ -761,12 +761,22 @@ class PizzaMakerApp(ctk.CTk):
             button_frame = ctk.CTkFrame(bottom_frame)
             button_frame.pack(side="right", padx=10)
 
+            # Кнопка комментария для конкретной пиццы
+            comment_btn = ctk.CTkButton(button_frame,
+                                        text="💬",
+                                        command=lambda p=pizza: self.add_item_comment_dialog(p),
+                                        width=40,
+                                        height=30,
+                                        fg_color="orange",
+                                        hover_color="#cc5500")
+            comment_btn.pack(side="left", padx=2)
+
             add_btn = ctk.CTkButton(button_frame,
                                     text="Добавить",
                                     command=lambda p=pizza, sz=size_var, base=info['цена'], d=pizza_discounts:
                                     self.add_pizza_with_size(p, sz, base, d),
                                     width=100)
-            add_btn.pack(side="left", padx=5)
+            add_btn.pack(side="left", padx=2)
 
             if pizza == "Кастомная":
                 custom_btn = ctk.CTkButton(
@@ -776,7 +786,7 @@ class PizzaMakerApp(ctk.CTk):
                     width=100,
                     fg_color="green",
                     hover_color="#006400")
-                custom_btn.pack(side="left", padx=5)
+                custom_btn.pack(side="left", padx=2)
 
         # Отображение напитков с выбором объема и учетом скидок
         for drink, info in menu["Напитки"].items():
@@ -837,23 +847,37 @@ class PizzaMakerApp(ctk.CTk):
             volume_var.trace('w', lambda *args: update_drink_price())
             update_drink_price()  # Initial update
 
-            add_btn = ctk.CTkButton(drink_frame,
+            # Кнопки для напитков
+            drink_button_frame = ctk.CTkFrame(drink_frame)
+            drink_button_frame.pack(anchor="e", pady=5)
+
+            # Кнопка комментария для напитка
+            drink_comment_btn = ctk.CTkButton(drink_button_frame,
+                                              text="💬",
+                                              command=lambda d=drink: self.add_item_comment_dialog(d),
+                                              width=40,
+                                              height=30,
+                                              fg_color="orange",
+                                              hover_color="#cc5500")
+            drink_comment_btn.pack(side="left", padx=2)
+
+            add_btn = ctk.CTkButton(drink_button_frame,
                                     text="Добавить",
                                     command=lambda d=drink, price=info['цена'], vol=volume_var:
                                     self.add_drink_with_volume(d, price, vol),
                                     width=100)
-            add_btn.pack(anchor="e", pady=5)
+            add_btn.pack(side="left", padx=2)
 
-        # Поле для комментария пользователя
+        # Поле для общего комментария к заказу
         comment_frame = ctk.CTkFrame(menu_frame)
         comment_frame.pack(pady=10, padx=10, fill="x")
 
         comment_btn = ctk.CTkButton(comment_frame,
-                                    text="💬 Добавить комментарий к заказу",
-                                    command=self.add_comment_dialog,
+                                    text="💬 Добавить общий комментарий к заказу",
+                                    command=self.add_general_comment_dialog,
                                     height=35,
-                                    fg_color="orange",
-                                    hover_color="#cc5500")
+                                    fg_color="blue",
+                                    hover_color="#00008b")
         comment_btn.pack(pady=5)
 
         # Отображение текущего комментария
@@ -896,15 +920,77 @@ class PizzaMakerApp(ctk.CTk):
                                   hover_color="#4a4a4a")
         clear_btn.pack(pady=5)
 
-    def add_comment_dialog(self):
-        """Диалог для добавления комментария"""
+    def add_item_comment_dialog(self, item_name):
+        """Диалог для добавления комментария к конкретному товару"""
         dialog = ctk.CTkToplevel(self)
-        dialog.title("Комментарий к заказу")
+        dialog.title(f"Комментарий к {item_name}")
+        dialog.geometry("400x250")
+        dialog.resizable(False, False)
+
+        ctk.CTkLabel(dialog,
+                     text=f"Добавить комментарий к {item_name}:",
+                     font=ctk.CTkFont(size=14, weight="bold")).pack(pady=10)
+
+        comment_text = scrolledtext.ScrolledText(dialog, width=40, height=6, font=("Arial", 12))
+        comment_text.pack(pady=10, padx=20, fill="both", expand=True)
+
+        # Проверяем, есть ли уже комментарий для этого товара
+        existing_comment = ""
+        for order_item in self.current_order:
+            if order_item['item'].startswith(item_name) and 'comment' in order_item:
+                existing_comment = order_item['comment']
+                break
+
+        comment_text.insert("1.0", existing_comment)
+
+        def save_comment():
+            comment = comment_text.get("1.0", "end-1c").strip()
+
+            # Находим товар в заказе и добавляем комментарий
+            for order_item in self.current_order:
+                if order_item['item'].startswith(item_name):
+                    if comment:
+                        order_item['comment'] = comment
+                        # Обновляем отображение в корзине
+                        order_item['item'] = f"{item_name.split('(')[0].strip()} ({order_item['item'].split('(')[1]} 💬"
+                    else:
+                        # Удаляем комментарий если пустой
+                        if 'comment' in order_item:
+                            del order_item['comment']
+                        # Возвращаем оригинальное название
+                        if '💬' in order_item['item']:
+                            order_item['item'] = order_item['item'].replace('💬', '').strip()
+
+                    self.update_cart_display()
+                    break
+
+            dialog.destroy()
+            if comment:
+                messagebox.showinfo("Успех", f"Комментарий добавлен к {item_name}")
+
+        button_frame = ctk.CTkFrame(dialog)
+        button_frame.pack(pady=10)
+
+        ctk.CTkButton(button_frame,
+                      text="Сохранить",
+                      command=save_comment,
+                      height=35).pack(side="left", padx=5)
+
+        ctk.CTkButton(button_frame,
+                      text="Отмена",
+                      command=dialog.destroy,
+                      height=35,
+                      fg_color="gray").pack(side="left", padx=5)
+
+    def add_general_comment_dialog(self):
+        """Диалог для добавления общего комментария к заказу"""
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Общий комментарий к заказу")
         dialog.geometry("500x300")
         dialog.resizable(False, False)
 
         ctk.CTkLabel(dialog,
-                     text="Введите ваш комментарий к заказу:",
+                     text="Введите общий комментарий к заказу:",
                      font=ctk.CTkFont(size=14, weight="bold")).pack(pady=10)
 
         comment_text = scrolledtext.ScrolledText(dialog, width=50, height=10, font=("Arial", 12))
@@ -930,6 +1016,19 @@ class PizzaMakerApp(ctk.CTk):
         multiplier = discounts.get(size, 1.0)
         price = int(base_price * multiplier)
         item_name = f"{pizza} ({size})"
+
+        # Проверяем, есть ли уже эта пицца в заказе с комментарием
+        for order_item in self.current_order:
+            if order_item['item'].startswith(pizza) and 'comment' in order_item:
+                item_name = f"{pizza} ({size}) 💬"
+                order_item['item'] = item_name
+                order_item['price'] = price
+                self.total_amount = sum(item['price'] for item in self.current_order)
+                self.update_cart_display()
+                messagebox.showinfo("Успех", f"{pizza} обновлена в корзине!")
+                return
+
+        # Если пиццы еще нет в заказе, добавляем новую
         self.current_order.append({"item": item_name, "price": price, "quantity": 1})
         self.total_amount += price
         self.update_cart_display()
@@ -947,6 +1046,20 @@ class PizzaMakerApp(ctk.CTk):
         if discount > 0:
             item_name += f" [СКИДКА {discount}%]"
 
+        # Проверяем, есть ли уже этот напиток в заказе с комментарием
+        for order_item in self.current_order:
+            if order_item['item'].startswith(drink) and 'comment' in order_item:
+                item_name = f"{drink} ({volume}) 💬"
+                if discount > 0:
+                    item_name += f" [СКИДКА {discount}%]"
+                order_item['item'] = item_name
+                order_item['price'] = final_price
+                self.total_amount = sum(item['price'] for item in self.current_order)
+                self.update_cart_display()
+                messagebox.showinfo("Успех", f"{drink} обновлен в корзине!")
+                return
+
+        # Если напитка еще нет в заказе, добавляем новый
         self.current_order.append({"item": item_name, "price": final_price, "quantity": 1})
         self.total_amount += final_price
         self.update_cart_display()
@@ -959,13 +1072,17 @@ class PizzaMakerApp(ctk.CTk):
             return
 
         for i, order_item in enumerate(self.current_order, 1):
-            self.cart_textbox.insert(
-                "end",
-                f"{i}. {order_item['item']} - {order_item['price']} руб.\n")
+            item_text = f"{i}. {order_item['item']} - {order_item['price']} руб."
+            # Добавляем комментарий если есть
+            if 'comment' in order_item:
+                item_text += f"\n   💬 {order_item['comment']}"
+            self.cart_textbox.insert("end", item_text + "\n\n")
 
     def clear_cart(self):
         self.current_order = []
         self.total_amount = 0
+        self.user_comment = ""
+        self.comment_label.configure(text="")
         self.update_cart_display()
 
     def create_custom_pizza_dialog(self):
@@ -1077,10 +1194,12 @@ class PizzaMakerApp(ctk.CTk):
         for item in self.current_order:
             order_text.insert("end",
                               f"• {item['item']} - {item['price']} руб.\n")
+            if 'comment' in item:
+                order_text.insert("end", f"   💬 {item['comment']}\n")
 
-        # Показываем комментарий если есть
+        # Показываем общий комментарий если есть
         if self.user_comment:
-            order_text.insert("end", f"\nКомментарий: {self.user_comment}\n")
+            order_text.insert("end", f"\n📝 Общий комментарий: {self.user_comment}\n")
 
         order_text.configure(state="disabled")
 
@@ -1168,7 +1287,14 @@ class PizzaMakerApp(ctk.CTk):
 
     def generate_receipt(self, payment_method, change):
         receipt_id = datetime.now().strftime("%Y%m%d%H%M%S")
-        order_items = [item["item"] for item in self.current_order]
+        order_items = []
+
+        # Собираем информацию о заказе с комментариями
+        for item in self.current_order:
+            item_info = item['item']
+            if 'comment' in item:
+                item_info += f" (комментарий: {item['comment']})"
+            order_items.append(item_info)
 
         # Сохранение в Excel
         order_data = {
@@ -1189,7 +1315,8 @@ class PizzaMakerApp(ctk.CTk):
             print("Ошибка сохранения заказа")
 
         # Обновление остатков
-        self.data_manager.update_inventory(order_items)
+        order_item_names = [item['item'] for item in self.current_order]
+        self.data_manager.update_inventory(order_item_names)
 
         # Генерация QR-кода
         self.generate_qr_code(receipt_id)
@@ -1295,6 +1422,12 @@ class PizzaMakerApp(ctk.CTk):
                 # Название товара
                 c.drawString(100, y_position, item_name)
                 y_position -= 12
+
+                # Комментарий к товару если есть
+                if 'comment' in item:
+                    c.drawString(110, y_position, f"Комментарий: {item['comment']}")
+                    y_position -= 12
+
                 # Количество x Цена = Сумма
                 c.drawString(110, y_position, f"{quantity} x {price}.00 = {total}.00")
                 y_position -= 12
@@ -1302,11 +1435,11 @@ class PizzaMakerApp(ctk.CTk):
                 c.drawString(110, y_position, f"НДС 20%: {item_vat}.00")
                 y_position -= 18
 
-            # Комментарий если есть
+            # Общий комментарий если есть
             if self.user_comment:
                 y_position -= 10
                 c.setFont("Helvetica-Bold", 9)
-                c.drawString(100, y_position, "Комментарий клиента:")
+                c.drawString(100, y_position, "Общий комментарий клиента:")
                 y_position -= 12
                 c.setFont("Helvetica", 8)
                 # Разбиваем длинный комментарий на строки
@@ -1417,10 +1550,12 @@ class PizzaMakerApp(ctk.CTk):
 """
         for item in self.current_order:
             receipt_text += f"• {item['item']} - {item['price']} руб.\n"
+            if 'comment' in item:
+                receipt_text += f"  💬 {item['comment']}\n"
 
-        # Добавляем комментарий если есть
+        # Добавляем общий комментарий если есть
         if self.user_comment:
-            receipt_text += f"\nКомментарий: {self.user_comment}\n"
+            receipt_text += f"\n📝 Общий комментарий: {self.user_comment}\n"
 
         receipt_text += f"\nИТОГО: {self.total_amount} руб."
         receipt_text += f"\nНДС: {vat}"
@@ -1540,6 +1675,7 @@ class PizzaMakerApp(ctk.CTk):
         self.create_welcome_frame()
 
 
+# Класс SettingsWindow остается без изменений (как в предыдущем коде)
 class SettingsWindow(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
